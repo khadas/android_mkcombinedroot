@@ -68,6 +68,6 @@ echo "make vendor_ramdisk done."
 
 echo "==========================================="
 echo "making vendor_boot image..."
-mkbootimg --dtb $DTB_PATH --vendor_cmdline "console=ttyFIQ0 androidboot.first_stage_console=1 androidboot.baseband=N/A androidboot.wificountrycode=US androidboot.veritymode=enforcing androidboot.hardware=rk30board androidboot.console=ttyFIQ0 androidboot.verifiedbootstate=orange firmware_class.path=/vendor/etc/firmware init=/init rootwait ro loop.max_part=7 androidboot.selinux=permissive buildvariant=userdebug" --header_version 3 --vendor_ramdisk $VENDOR_RAMDISK_FILE --vendor_boot $VENDOR_BOOT_FILE
+mkbootimg --dtb $DTB_PATH --vendor_cmdline "console=ttyFIQ0 androidboot.first_stage_console=1 androidboot.baseband=N/A androidboot.wificountrycode=US androidboot.veritymode=enforcing androidboot.hardware=rk30board androidboot.console=ttyFIQ0 androidboot.verifiedbootstate=orange firmware_class.path=/vendor/etc/firmware init=/init rootwait ro loop.max_part=7 androidboot.boot_devices=fe310000.sdhci,fe330000.nandc androidboot.selinux=permissive buildvariant=userdebug" --header_version 3 --vendor_ramdisk $VENDOR_RAMDISK_FILE --vendor_boot $VENDOR_BOOT_FILE
 echo "make vendor_boot image done."
 echo "==========================================="
