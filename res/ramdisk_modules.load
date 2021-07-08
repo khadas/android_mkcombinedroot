@@ -5,6 +5,7 @@ clk-rk3568.ko
 pm_domains.ko
 phy-rockchip-typec.ko
 phy-rockchip-inno-usb2.ko
+phy-rockchip-naneng-combphy.ko
 sdhci-of-dwcmshc.ko
 sdhci-of-arasan.ko
 cqhci.ko
