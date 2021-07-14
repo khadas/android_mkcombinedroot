@@ -19,6 +19,11 @@ export PATH=$PATH:./bin
 
 clean_file() {
     if [ -f $1 ]; then
+        echo "cleaning file $1"
+        rm -rf $1
+    fi
+    if [ -d $1 ]; then
+        echo "cleaning dir $1"
         rm -rf $1
     fi
 }
