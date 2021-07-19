@@ -8,6 +8,8 @@ TEMP_MODULES_PATH=./temp/lib/modules/0.0
 VENDOR_RAMDISK_FILE=out/vendor_ramdisk.cpio.gz
 VENDOR_BOOT_FILE=out/vendor_boot.img
 
+readonly OBJCOPY_BIN=llvm-objcopy
+readonly USE_STRIP=1
 
 if [ ! -n "$1" ]; then
   DTB_PATH=$KERNEL_DRIVERS_PATH/arch/arm64/boot/dts/rockchip/rk3566-rk817-tablet.dtb
@@ -16,6 +18,21 @@ else
 fi
 
 export PATH=$PATH:./bin
+
+# $1 origin path
+# $2 target path
+objcopy() {
+    if [ ! -f $1 ]; then
+        echo "NOT FOUND!"
+        return
+    fi
+    local module_name=`basename -a $1`
+    local OBJCOPY_ARGS=""
+    if [ $USE_STRIP = "1" ]; then
+        OBJCOPY_ARGS="--strip-debug"
+    fi
+    $OBJCOPY_BIN $OBJCOPY_ARGS $1 $2$module_name
+}
 
 clean_file() {
     if [ -f $1 ]; then
@@ -33,6 +50,7 @@ create_dir() {
         mkdir -p $1
     fi
 }
+
 echo "==========================================="
 echo "Preparing temp dirs and use placeholder 0.0..."
 clean_file temp
@@ -53,8 +71,8 @@ for MODULE in "${modules_ramdisk_array[@]}"
 do
   echo "Copying $MODULE..."
   module_file=($(find $KERNEL_DRIVERS_PATH -name $MODULE))
-  cp $module_file $TEMP_MODULES_PATH/
-  cp $module_file $PRIVATE_MODULE_DIR/
+  objcopy $module_file $TEMP_MODULES_PATH/
+  objcopy $module_file $PRIVATE_MODULE_DIR/
 done
 echo "==========================================="
 echo "Generating depmod..."
