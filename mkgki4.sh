@@ -1,24 +1,31 @@
 #!/bin/bash
-KERNEL_DRIVERS_PATH=../kernel-5.10
-KERNEL_IMAGE=$KERNEL_DRIVERS_PATH/arch/arm64/boot/Image
-SAMPLE_BOOTIMG=./boot_sample.img
-VENDOR_RAMDISK_DIR=./vendor_ramdisk
-PRIVATE_MODULE_DIR=$VENDOR_RAMDISK_DIR/lib/modules
-PRIVATE_LOAD_FILE=./res/ramdisk_modules.load
-TEMP_MODULES_PATH=./temp/lib/modules/0.0
-VENDOR_RAMDISK_FILE=out/vendor_ramdisk.cpio.gz
-VENDOR_BOOT_FILE=out/vendor_boot.img
-BOOT_FILE=out/boot.img
-VENDOR_BOOTCONFIG_FILE=res/bootconfig
-TMP_BOOT_DIR=./temp/boot
+CURRENT_KERNEL_VERSION=5.10
+CFG_PATH_DEFAULT=./res
+CFG_TMP_DIR=./.temp
+
+CFG_DEBUG_LIST_FILE=$CFG_PATH_DEFAULT/debug_list.load
+CFG_KERNEL_DRIVERS_PATH=../kernel-$CURRENT_KERNEL_VERSION
+CFG_SAMPLE_BOOTIMG=./prebuilts/boot-$CURRENT_KERNEL_VERSION.img
+CFG_VENDOR_RAMDISK_LOAD_FILE=$CFG_PATH_DEFAULT/vendor_ramdisk_modules.load
+CFG_VENDOR_BOOTCONFIG_FILE=$CFG_PATH_DEFAULT/bootconfig
+
+TMP_BOOT_DIR=$CFG_TMP_DIR/boot
+TMP_MODULES_PATH=$CFG_TMP_DIR/lib/modules/0.0
+TMP_VENDOR_RAMDISK_FILE=out/vendor_ramdisk.cpio.gz
+TMP_KERNEL_IMAGE=$TMP_BOOT_DIR/kernel
+
+OUT_VENDOR_BOOT_FILE=out/vendor_boot.img
+OUT_BOOT_FILE=out/boot.img
+OUT_VENDOR_RAMDISK_DIR=./vendor_ramdisk
+OUT_MODULE_DIR=$OUT_VENDOR_RAMDISK_DIR/lib/modules
 
 readonly OBJCOPY_BIN=llvm-objcopy
 readonly USE_STRIP=1
 
-if [ ! -n "$1" ]; then
-  DTB_PATH=$KERNEL_DRIVERS_PATH/arch/arm64/boot/dts/rockchip/rk3566-rk817-tablet.dtb
+if [ -z $MY_DTB ]; then
+  DTB_PATH=$CFG_KERNEL_DRIVERS_PATH/arch/arm64/boot/dts/rockchip/rk3588-evb1-lp4-v10.dtb
 else
-  DTB_PATH=$KERNEL_DRIVERS_PATH/arch/arm64/boot/dts/rockchip/$1.dtb
+  DTB_PATH=$CFG_KERNEL_DRIVERS_PATH/arch/arm64/boot/dts/rockchip/$MY_DTB.dtb
 fi
 
 export PATH=$PATH:./bin
@@ -55,56 +62,68 @@ create_dir() {
     fi
 }
 
+copy_from_load_file() {
+    TMP_LOAD_FILE=$1
+    TMP_SOURCE_PATH=$2
+    echo -e "\033[33mRead modules list from $TMP_LOAD_FILE\033[0m"
+    modules_ramdisk_array=($(cat $TMP_LOAD_FILE))
+    for MODULE in "${modules_ramdisk_array[@]}"
+    do
+        module_file=($(find $TMP_SOURCE_PATH -name $MODULE))
+        echo "Copying $module_file"
+        objcopy $module_file $TMP_MODULES_PATH/
+    done
+}
+
 echo "==========================================="
-echo "Preparing temp dirs and use placeholder 0.0..."
-clean_file temp
-clean_file $PRIVATE_MODULE_DIR
-clean_file $VENDOR_BOOT_FILE
-clean_file $VENDOR_RAMDISK_FILE
+echo "Preparing $CFG_TMP_DIR dirs and use placeholder 0.0..."
+clean_file system
+clean_file $CFG_TMP_DIR
+clean_file $OUT_VENDOR_BOOT_FILE
+clean_file $TMP_VENDOR_RAMDISK_FILE
 create_dir system
 create_dir out
-create_dir $TEMP_MODULES_PATH
-create_dir $PRIVATE_MODULE_DIR
-echo "Prepare temp dirs done."
+create_dir $TMP_MODULES_PATH
+echo "Prepare $CFG_TMP_DIR dirs done."
 echo "==========================================="
-echo -e "\033[33mRead modules list from $PRIVATE_LOAD_FILE\033[0m"
 echo -e "\033[33mUse DTS as $DTB_PATH\033[0m"
-echo "==========================================="
-modules_ramdisk_array=($(cat $PRIVATE_LOAD_FILE))
-for MODULE in "${modules_ramdisk_array[@]}"
-do
-  echo "Copying $MODULE..."
-  module_file=($(find $KERNEL_DRIVERS_PATH -name $MODULE))
-  objcopy $module_file $TEMP_MODULES_PATH/
-  objcopy $module_file $PRIVATE_MODULE_DIR/
-done
-echo "==========================================="
+
+if [ -z $COPY_ALL_KO ]; then
+copy_from_load_file $CFG_VENDOR_RAMDISK_LOAD_FILE $OUT_MODULE_DIR
+copy_from_load_file $CFG_DEBUG_LIST_FILE $CFG_KERNEL_DRIVERS_PATH
+else
+copy_from_load_file $CFG_VENDOR_RAMDISK_LOAD_FILE $CFG_KERNEL_DRIVERS_PATH
+fi
+
 echo "Generating depmod..."
-depmod -b temp 0.0
+depmod -b $CFG_TMP_DIR 0.0
 echo "Generate depmod done."
 
-cp $TEMP_MODULES_PATH/modules.alias $PRIVATE_MODULE_DIR/
-cp $PRIVATE_LOAD_FILE $PRIVATE_MODULE_DIR/modules.load
-cp $TEMP_MODULES_PATH/modules.dep $PRIVATE_MODULE_DIR/
-cp $TEMP_MODULES_PATH/modules.softdep $PRIVATE_MODULE_DIR/
+clean_file $OUT_MODULE_DIR
+create_dir $OUT_MODULE_DIR
+mv $TMP_MODULES_PATH/* $OUT_MODULE_DIR/
+cp $CFG_VENDOR_RAMDISK_LOAD_FILE $OUT_MODULE_DIR/modules.load -f
+rm -rf $OUT_MODULE_DIR/modules.*.bin
+clean_file $OUT_MODULE_DIR/modules.symbols
+clean_file $OUT_MODULE_DIR/modules.devname
 
 echo "==========================================="
-echo "unpacking $SAMPLE_BOOTIMG..."
-./unpack_bootimg.py --boot_img $SAMPLE_BOOTIMG --out $TMP_BOOT_DIR
-echo "unpack $SAMPLE_BOOTIMG done."
+echo "unpacking $CFG_SAMPLE_BOOTIMG..."
+unpack_bootimg.py --boot_img $CFG_SAMPLE_BOOTIMG --out $TMP_BOOT_DIR
+echo "unpack $CFG_SAMPLE_BOOTIMG done."
 
 echo "==========================================="
 echo "making vendor_ramdisk..."
-mkbootfs -d ./system $VENDOR_RAMDISK_DIR | minigzip > $VENDOR_RAMDISK_FILE
+mkbootfs -d ./system $OUT_VENDOR_RAMDISK_DIR | minigzip > $TMP_VENDOR_RAMDISK_FILE
 echo "make vendor_ramdisk done."
 
 echo "==========================================="
 echo "making vendor_boot image..."
-mkbootimg --dtb $DTB_PATH --vendor_cmdline "console=ttyFIQ0 firmware_class.path=/vendor/etc/firmware init=/init rootwait ro loop.max_part=7 bootconfig buildvariant=userdebug" --header_version 4 --vendor_bootconfig $VENDOR_BOOTCONFIG_FILE --vendor_ramdisk $VENDOR_RAMDISK_FILE --vendor_boot $VENDOR_BOOT_FILE
+mkbootimg --dtb $DTB_PATH --vendor_cmdline "console=ttyFIQ0 firmware_class.path=/vendor/etc/firmware init=/init rootwait ro loop.max_part=7 bootconfig buildvariant=userdebug" --header_version 4 --vendor_bootconfig $CFG_VENDOR_BOOTCONFIG_FILE --vendor_ramdisk $TMP_VENDOR_RAMDISK_FILE --vendor_boot $OUT_VENDOR_BOOT_FILE
 echo "make vendor_boot image done."
 echo "==========================================="
 
 echo "making boot image..."
-mkbootimg --kernel $KERNEL_IMAGE --ramdisk $TMP_BOOT_DIR/ramdisk --os_version 12 --os_patch_level 2021-10-05 --header_version 4 --output $BOOT_FILE
+mkbootimg --kernel $TMP_KERNEL_IMAGE --ramdisk $TMP_BOOT_DIR/ramdisk --os_version 12 --os_patch_level 2022-09-05 --header_version 4 --output $OUT_BOOT_FILE
 echo "make boot image done."
 echo "==========================================="
