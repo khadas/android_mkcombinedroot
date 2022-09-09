@@ -62,6 +62,7 @@ dw-mipi-dsi.ko
 dw9714.ko
 dw_mmc-pltfm.ko
 dw_mmc-rockchip.ko
+pwrseq_simple.ko
 dw_mmc.ko
 dw_wdt.ko
 dwc2.ko
@@ -164,8 +165,6 @@ nvme.ko
 nvmem-rockchip-otp.ko
 nvmem_rockchip_efuse.ko
 ofb.ko
-ohci-hcd.ko
-ohci-platform.ko
 optee-rng.ko
 optee.ko
 ov13850.ko
@@ -310,5 +309,13 @@ video_rkisp.ko
 phy-rockchip-mipi-rx.ko
 phy-rockchip-csi2-dphy-hw.ko
 phy-rockchip-csi2-dphy.ko
+rk_ircut.ko
+otp_eeprom.ko
+aw8601.ko
 xz3216.ko
 imx415.ko
+ov50c40.ko
+ov13855.ko
+rknpu.ko
+ohci-hcd.ko
+ohci-platform.ko
