@@ -44,7 +44,7 @@ rockchip-dfi.ko
 rockchip-nocp.ko
 rockchip-rng.ko
 rockchip.ko
-cma_heap.ko
+rk_cma_heap.ko
 cqhci.ko
 cryptodev.ko
 cw2015_battery.ko
@@ -60,8 +60,10 @@ dw-hdmi-qp.ko
 dw-hdmi.ko
 dw-mipi-dsi.ko
 dw9714.ko
+mmc_hsq.ko
 dw_mmc-pltfm.ko
 dw_mmc-rockchip.ko
+pwrseq_simple.ko
 dw_mmc.ko
 dw_wdt.ko
 dwc2.ko
@@ -164,8 +166,6 @@ nvme.ko
 nvmem-rockchip-otp.ko
 nvmem_rockchip_efuse.ko
 ofb.ko
-ohci-hcd.ko
-ohci-platform.ko
 optee-rng.ko
 optee.ko
 ov13850.ko
@@ -181,7 +181,6 @@ phy-rockchip-inno-usb3.ko
 phy-rockchip-naneng-combphy.ko
 phy-rockchip-naneng-edp.ko
 phy-rockchip-pcie.ko
-pcie-dw-rockchip.ko
 phy-rockchip-samsung-dcphy.ko
 phy-rockchip-samsung-hdptx-hdmi.ko
 phy-rockchip-snps-pcie3.ko
@@ -192,8 +191,6 @@ pl330.ko
 plusb.ko
 ps_stk3410.ko
 reboot-mode.ko
-cfg80211.ko
-mac80211.ko
 rfkill-rk.ko
 rk1000-core.ko
 rk1000.ko
@@ -218,7 +215,6 @@ rk817_battery.ko
 rk817_charger.ko
 rk818_battery.ko
 rk818_charger.ko
-rk_crypto.ko
 rk_fiq_debugger.ko
 rk_headset.ko
 rk_headset_irq_hook_adc.ko
@@ -231,6 +227,8 @@ rockchip_sip.ko
 rockchip_thermal.ko
 rtc-hym8563.ko
 rtc-rk808.ko
+libdes.ko
+rk_crypto.ko
 sc7660.ko
 sc7a20.ko
 sc7a30.ko
@@ -276,7 +274,7 @@ spi-rockchip.ko
 spidev.ko
 sw_sync.ko
 syscon-reboot-mode.ko
-system_heap.ko
+rk_system_heap.ko
 tcpci_husb311.ko
 tee.ko
 test_power.ko
@@ -310,5 +308,13 @@ video_rkisp.ko
 phy-rockchip-mipi-rx.ko
 phy-rockchip-csi2-dphy-hw.ko
 phy-rockchip-csi2-dphy.ko
+rk_ircut.ko
+otp_eeprom.ko
+aw8601.ko
 xz3216.ko
 imx415.ko
+ov50c40.ko
+ov13855.ko
+rknpu.ko
+ohci-hcd.ko
+ohci-platform.ko
