@@ -109,7 +109,7 @@ clean_file $OUT_MODULE_DIR/modules.devname
 
 echo "==========================================="
 echo "unpacking $CFG_SAMPLE_BOOTIMG..."
-unpack_bootimg.py --boot_img $CFG_SAMPLE_BOOTIMG --out $TMP_BOOT_DIR
+unpack_bootimg --boot_img $CFG_SAMPLE_BOOTIMG --out $TMP_BOOT_DIR
 echo "unpack $CFG_SAMPLE_BOOTIMG done."
 
 echo "==========================================="
