@@ -24,3 +24,4 @@ vendor_ramdisk/lib/modules/modules.alias
 vendor_ramdisk/lib/modules/modules.dep
 vendor_ramdisk/lib/modules/modules.load
 vendor_ramdisk/lib/modules/modules.softdep
+*.class
