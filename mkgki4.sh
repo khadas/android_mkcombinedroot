@@ -19,6 +19,12 @@ OUT_BOOT_FILE=out/boot.img
 OUT_VENDOR_RAMDISK_DIR=./vendor_ramdisk
 OUT_MODULE_DIR=$OUT_VENDOR_RAMDISK_DIR/lib/modules
 
+if [ -f vendor_boot.img ]; then
+GLOBAL_UPDATE_LIST="repack_bootimg --local --dst_bootimg vendor_boot.img \
+--ramdisk_add res/vendor_ramdisk_modules.load:lib/modules/modules.load \
+--ramdisk_add res/vendor_ramdisk_modules.load:lib/modules/modules.load.recovery"
+fi
+
 readonly OBJCOPY_BIN=llvm-objcopy
 readonly USE_STRIP=1
 
@@ -72,6 +78,9 @@ copy_from_load_file() {
         module_file=($(find $TMP_SOURCE_PATH -name $MODULE))
         echo "Copying $module_file"
         objcopy $module_file $TMP_MODULES_PATH/
+        if [ -f vendor_boot.img ]; then
+            GLOBAL_UPDATE_LIST="$GLOBAL_UPDATE_LIST --ramdisk_add $OUT_MODULE_DIR/$MODULE:lib/modules/$MODULE"
+        fi
     done
 }
 
@@ -108,6 +117,11 @@ clean_file $OUT_MODULE_DIR/modules.symbols
 clean_file $OUT_MODULE_DIR/modules.devname
 
 echo "==========================================="
+if [ -f vendor_boot.img ]; then
+    echo "Using repack_bootimg: $GLOBAL_UPDATE_LIST"
+    RET=`$GLOBAL_UPDATE_LIST`
+    echo "$RET"
+else
 echo "unpacking $CFG_SAMPLE_BOOTIMG..."
 unpack_bootimg --boot_img $CFG_SAMPLE_BOOTIMG --out $TMP_BOOT_DIR
 echo "unpack $CFG_SAMPLE_BOOTIMG done."
@@ -125,5 +139,6 @@ echo "==========================================="
 
 echo "making boot image..."
 mkbootimg --kernel $TMP_KERNEL_IMAGE --ramdisk $TMP_BOOT_DIR/ramdisk --os_version 12 --os_patch_level 2022-09-05 --header_version 4 --output $OUT_BOOT_FILE
+fi
 echo "make boot image done."
 echo "==========================================="
