@@ -5,6 +5,7 @@ clk-px30.ko
 clk-rk3399.ko
 clk-rk3588.ko
 clk-rk3568.ko
+clk-rk3562.ko
 clk-rk628.ko
 clk-pwm.ko
 clk-scmi.ko
@@ -13,7 +14,6 @@ rk808.ko
 clk-rk808.ko
 io-domain.ko
 grf.ko
-clk-link.ko
 gpio-rockchip.ko
 rockchip-iommu.ko
 pinctrl-rk628.ko
@@ -186,6 +186,7 @@ dw-hdmi-qp-i2s-audio.ko
 dw-mipi-dsi.ko
 rockchipdrm.ko
 display-connector.ko
+clk-link.ko
 pl330.ko
 plusb.ko
 ps_stk3410.ko
