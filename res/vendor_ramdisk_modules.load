@@ -55,6 +55,7 @@ cryptodev.ko
 cw2015_battery.ko
 da223.ko
 dm9601.ko
+dw9763.ko
 dw9714.ko
 mmc_hsq.ko
 dw_mmc.ko
