@@ -1,9 +1,17 @@
 # Rockchip 2022 makefile
 # Generate from vendor/rockchip/gki/modular_kernel/configs/vendor_ramdisk_modules.load
 
-BOARD_VENDOR_RAMDISK_KERNEL_MODULES_LOAD := $(strip $(shell cat $(KERNEL_GKI_DIR)/res/vendor_ramdisk_modules.load))
-ifndef BOARD_VENDOR_RAMDISK_KERNEL_MODULES_LOAD
-$(error vendor_ramdisk_modules.load not found or empty)
+# SoC modules
+BOARD_VENDOR_RAMDISK_SOC_LIST := $(strip $(shell cat $(KERNEL_GKI_DIR)/res/soc/$(TARGET_BOARD_PLATFORM)/vendor_ramdisk_modules.load))
+ifndef BOARD_VENDOR_RAMDISK_SOC_LIST
+$(error SoC load file not found, GKI is not support for $(TARGET_BOARD_PLATFORM) now)
 endif
 
-BOARD_VENDOR_RAMDISK_KERNEL_MODULES := $(addprefix $(KERNEL_DRIVERS_PATH)/, $(notdir $(BOARD_VENDOR_RAMDISK_KERNEL_MODULES_LOAD)))
+# Board modules, refs to DTS
+BOARD_VENDOR_RAMDISK_BOARD_LIST := $(strip $(shell cat $(KERNEL_GKI_DIR)/res/board/$(PRODUCT_KERNEL_DTS).load))
+ifndef BOARD_VENDOR_RAMDISK_BOARD_LIST
+$(error $(PRODUCT_KERNEL_DTS).load not found, please add your proprietary load file.)
+endif
+
+BOARD_VENDOR_RAMDISK_KERNEL_MODULES := $(addprefix $(KERNEL_DRIVERS_PATH)/, $(notdir $(BOARD_VENDOR_RAMDISK_SOC_LIST)))
+BOARD_VENDOR_RAMDISK_KERNEL_MODULES += $(addprefix $(KERNEL_DRIVERS_PATH)/, $(notdir $(BOARD_VENDOR_RAMDISK_BOARD_LIST)))

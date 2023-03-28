@@ -3,10 +3,27 @@ CURRENT_KERNEL_VERSION=5.10
 CFG_PATH_DEFAULT=./res
 CFG_TMP_DIR=./.temp
 
+if [ -z $MY_SOC ]; then
+ENV_SOC=rk3588
+else
+ENV_SOC=$MY_SOC
+fi
+
+if [ -z $MY_DTB ]; then
+ENV_DTB=rk3588-evb1-lp4-v10
+else
+ENV_DTB=$MY_DTB
+fi
+echo "++++++++++++ INFO +++++++++++++++"
+echo "SOC: $ENV_SOC"
+echo "DTB: $ENV_DTB"
+echo "++++++++++++ END  +++++++++++++++"
+
 CFG_DEBUG_LIST_FILE=$CFG_PATH_DEFAULT/debug_list.load
 CFG_KERNEL_DRIVERS_PATH=../kernel-$CURRENT_KERNEL_VERSION
 CFG_SAMPLE_BOOTIMG=./prebuilts/boot-$CURRENT_KERNEL_VERSION.img
-CFG_VENDOR_RAMDISK_LOAD_FILE=$CFG_PATH_DEFAULT/vendor_ramdisk_modules.load
+CFG_VENDOR_RAMDISK_LOAD_FILE=$CFG_PATH_DEFAULT/soc/$ENV_SOC/vendor_ramdisk_modules.load
+CFG_BOARD_VRAMDISK_LOAD_FILE=$CFG_PATH_DEFAULT/board/$ENV_DTB.load
 CFG_VENDOR_BOOTCONFIG_FILE=$CFG_PATH_DEFAULT/bootconfig
 
 TMP_BOOT_DIR=$CFG_TMP_DIR/boot
@@ -19,22 +36,34 @@ OUT_BOOT_FILE=out/boot.img
 OUT_VENDOR_RAMDISK_DIR=./vendor_ramdisk
 OUT_MODULE_DIR=$OUT_VENDOR_RAMDISK_DIR/lib/modules
 
+# Check file exist or not.
+if [ -f $CFG_VENDOR_RAMDISK_LOAD_FILE ]; then
+  echo "Using $CFG_VENDOR_RAMDISK_LOAD_FILE"
+else
+  echo "Current SoC: $ENV_SOC is not support."
+  exit 0
+fi
+
+if [ -f $CFG_BOARD_VRAMDISK_LOAD_FILE ]; then
+  echo "Using $CFG_BOARD_VRAMDISK_LOAD_FILE"
+else
+  echo "Current Board: $ENV_DTB is not support."
+  exit 0
+fi
+
 if [ -f vendor_boot.img ]; then
 GLOBAL_UPDATE_LIST="repack_bootimg --local --dst_bootimg vendor_boot.img \
---ramdisk_add res/vendor_ramdisk_modules.load:lib/modules/modules.load \
---ramdisk_add res/vendor_ramdisk_modules.load:lib/modules/modules.load.recovery"
+--ramdisk_add $OUT_MODULE_DIR/modules.load:lib/modules/modules.load \
+--ramdisk_add $OUT_MODULE_DIR/modules.load:lib/modules/modules.load.recovery"
 fi
 
 readonly OBJCOPY_BIN=llvm-objcopy
 readonly USE_STRIP=1
 
-if [ -z $MY_DTB ]; then
-  DTB_PATH=$CFG_KERNEL_DRIVERS_PATH/arch/arm64/boot/dts/rockchip/rk3588-evb1-lp4-v10.dtb
-else
-  DTB_PATH=$CFG_KERNEL_DRIVERS_PATH/arch/arm64/boot/dts/rockchip/$MY_DTB.dtb
-fi
+DTB_PATH=$CFG_KERNEL_DRIVERS_PATH/arch/arm64/boot/dts/rockchip/$ENV_DTB.dtb
 
 export PATH=$PATH:./bin
+
 
 # $1 origin path
 # $2 target path
@@ -99,9 +128,11 @@ echo -e "\033[33mUse DTS as $DTB_PATH\033[0m"
 
 if [ -z $COPY_ALL_KO ]; then
 copy_from_load_file $CFG_VENDOR_RAMDISK_LOAD_FILE $OUT_MODULE_DIR
+copy_from_load_file $CFG_BOARD_VRAMDISK_LOAD_FILE $OUT_MODULE_DIR
 copy_from_load_file $CFG_DEBUG_LIST_FILE $CFG_KERNEL_DRIVERS_PATH
 else
 copy_from_load_file $CFG_VENDOR_RAMDISK_LOAD_FILE $CFG_KERNEL_DRIVERS_PATH
+copy_from_load_file $CFG_BOARD_VRAMDISK_LOAD_FILE $CFG_KERNEL_DRIVERS_PATH
 fi
 
 echo "Generating depmod..."
@@ -112,6 +143,7 @@ clean_file $OUT_MODULE_DIR
 create_dir $OUT_MODULE_DIR
 mv $TMP_MODULES_PATH/* $OUT_MODULE_DIR/
 cp $CFG_VENDOR_RAMDISK_LOAD_FILE $OUT_MODULE_DIR/modules.load -f
+cat $CFG_BOARD_VRAMDISK_LOAD_FILE >> $OUT_MODULE_DIR/modules.load
 rm -rf $OUT_MODULE_DIR/modules.*.bin
 clean_file $OUT_MODULE_DIR/modules.symbols
 clean_file $OUT_MODULE_DIR/modules.devname
