@@ -187,7 +187,6 @@ dw-hdmi-qp-i2s-audio.ko
 dw-mipi-dsi.ko
 rockchipdrm.ko
 display-connector.ko
-clk-link.ko
 pl330.ko
 plusb.ko
 ps_stk3410.ko
@@ -252,6 +251,7 @@ snd-soc-rockchip-i2s-tdm.ko
 snd-soc-rockchip-i2s.ko
 snd-soc-rockchip-multicodecs.ko
 snd-soc-rockchip-pdm.ko
+snd-soc-rockchip-sai.ko
 snd-soc-rockchip-spdif.ko
 snd-soc-rockchip-spdifrx.ko
 snd-soc-rt5640.ko
@@ -303,6 +303,7 @@ video_rkisp.ko
 phy-rockchip-mipi-rx.ko
 phy-rockchip-csi2-dphy-hw.ko
 phy-rockchip-csi2-dphy.ko
+clk-link.ko
 rk_ircut.ko
 thcv244.ko
 otp_eeprom.ko
