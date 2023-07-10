@@ -148,3 +148,6 @@ stmmac-platform.ko
 stmmac.ko
 rga3.ko
 pwrseq_simple.ko
+cfg80211.ko
+mac80211.ko
+

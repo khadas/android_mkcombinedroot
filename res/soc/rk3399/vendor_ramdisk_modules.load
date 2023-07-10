@@ -174,3 +174,6 @@ stmmac.ko
 rga3.ko
 pwrseq_simple.ko
 bq25700_charger.ko
+cfg80211.ko
+mac80211.ko
+

@@ -150,3 +150,5 @@ stmmac.ko
 rga3.ko
 rockchip_debug.ko
 rockchip-hdmirx.ko
+cfg80211.ko
+mac80211.ko
