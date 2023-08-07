@@ -164,5 +164,3 @@ rga3.ko
 rockchip_debug.ko
 pwrseq_simple.ko
 rockchip_pwm_remotectl.ko
-cfg80211.ko
-mac80211.ko
