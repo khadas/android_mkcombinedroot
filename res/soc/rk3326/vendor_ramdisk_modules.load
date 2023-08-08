@@ -128,7 +128,6 @@ cpufreq-dt.ko
 rockchip-cpufreq.ko
 pm_domains.ko
 rockchip_dmc.ko
-rk_vcodec.ko
 v4l2-fwnode.ko
 videobuf2-cma-sg.ko
 video_rkcif.ko
@@ -148,3 +147,4 @@ stmmac-platform.ko
 stmmac.ko
 rga3.ko
 pwrseq_simple.ko
+rk_vcodec.ko
