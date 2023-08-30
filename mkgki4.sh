@@ -1,29 +1,14 @@
 #!/bin/bash
+
+DEBUG="0"
+
 CURRENT_KERNEL_VERSION=5.10
 CFG_PATH_DEFAULT=./res
 CFG_TMP_DIR=./.temp
 
-if [ -z $MY_SOC ]; then
-ENV_SOC=rk3588
-else
-ENV_SOC=$MY_SOC
-fi
-
-if [ -z $MY_DTB ]; then
-ENV_DTB=rk3588-evb1-lp4-v10
-else
-ENV_DTB=$MY_DTB
-fi
-echo "++++++++++++ INFO +++++++++++++++"
-echo "SOC: $ENV_SOC"
-echo "DTB: $ENV_DTB"
-echo "++++++++++++ END  +++++++++++++++"
-
 CFG_DEBUG_LIST_FILE=$CFG_PATH_DEFAULT/debug_list.load
 CFG_KERNEL_DRIVERS_PATH=../kernel-$CURRENT_KERNEL_VERSION
 CFG_SAMPLE_BOOTIMG=./prebuilts/boot-$CURRENT_KERNEL_VERSION.img
-CFG_VENDOR_RAMDISK_LOAD_FILE=$CFG_PATH_DEFAULT/soc/$ENV_SOC/vendor_ramdisk_modules.load
-CFG_BOARD_VRAMDISK_LOAD_FILE=$CFG_PATH_DEFAULT/board/$ENV_DTB.load
 CFG_VENDOR_BOOTCONFIG_FILE=$CFG_PATH_DEFAULT/bootconfig
 
 TMP_BOOT_DIR=$CFG_TMP_DIR/boot
@@ -36,34 +21,21 @@ OUT_BOOT_FILE=out/boot.img
 OUT_VENDOR_RAMDISK_DIR=./vendor_ramdisk
 OUT_MODULE_DIR=$OUT_VENDOR_RAMDISK_DIR/lib/modules
 
-# Check file exist or not.
-if [ -f $CFG_VENDOR_RAMDISK_LOAD_FILE ]; then
-  echo "Using $CFG_VENDOR_RAMDISK_LOAD_FILE"
-else
-  echo "Current SoC: $ENV_SOC is not support."
-  exit 0
-fi
-
-if [ -f $CFG_BOARD_VRAMDISK_LOAD_FILE ]; then
-  echo "Using $CFG_BOARD_VRAMDISK_LOAD_FILE"
-else
-  echo "Current Board: $ENV_DTB is not support."
-  exit 0
-fi
-
-if [ -f vendor_boot.img ]; then
-GLOBAL_UPDATE_LIST="repack_bootimg --local --dst_bootimg vendor_boot.img \
---ramdisk_add $OUT_MODULE_DIR/modules.load:lib/modules/modules.load \
---ramdisk_add $OUT_MODULE_DIR/modules.load:lib/modules/modules.load.recovery"
-fi
-
 readonly OBJCOPY_BIN=llvm-objcopy
-readonly USE_STRIP=1
 
-DTB_PATH=$CFG_KERNEL_DRIVERS_PATH/arch/arm64/boot/dts/rockchip/$ENV_DTB.dtb
+log() {
+    if [[ $DEBUG = "1" ]]; then
+        echo $1
+    fi
+}
 
-export PATH=$PATH:./bin
+success() {
+    echo -e "\033[32m$1\033[0m"
+}
 
+fail() {
+    echo -e "\033[31m$1\033[0m"
+}
 
 # $1 origin path
 # $2 target path
@@ -75,9 +47,12 @@ objcopy() {
     local module_name=`basename -a $1`
     local OBJCOPY_ARGS=""
     if [ $USE_STRIP = "1" ]; then
+        echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++=="
         OBJCOPY_ARGS="--strip-debug"
+        $OBJCOPY_BIN $OBJCOPY_ARGS $1 $2$module_name
+    else
+        cp $1 $2$module_name
     fi
-    $OBJCOPY_BIN $OBJCOPY_ARGS $1 $2$module_name
 }
 
 clean_file() {
@@ -105,15 +80,125 @@ copy_from_load_file() {
     for MODULE in "${modules_ramdisk_array[@]}"
     do
         module_file=($(find $TMP_SOURCE_PATH -name $MODULE))
-        echo "Copying $module_file"
+        log "Copying $module_file"
         objcopy $module_file $TMP_MODULES_PATH/
         if [ -f vendor_boot.img ]; then
-            GLOBAL_UPDATE_LIST="$GLOBAL_UPDATE_LIST --ramdisk_add $OUT_MODULE_DIR/$MODULE:lib/modules/$MODULE"
+            GLOBAL_UPDATE_LIST="$GLOBAL_UPDATE_LIST --ramdisk_add $TMP_MODULES_PATH/$MODULE:lib/modules/$MODULE"
         fi
     done
 }
 
-echo "==========================================="
+get_param_value() {
+    echo "$1" | cut -d '=' -f 2
+}
+
+validate_soc() {
+    local valid_socs=("rk3562" "rk3588" "rk356x" "rk3399" "rk3326")
+    local soc=$1
+    for valid_soc in "${valid_socs[@]}"; do
+        if [ "$soc" == "$valid_soc" ]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+process_param() {
+    local param="$1"
+    local name=$(echo "$param" | cut -d '=' -f 1)
+    local value=$(get_param_value "$param")
+    
+    case "$name" in
+        "SOC")
+            if ! validate_soc "$value"; then
+                echo "Invalid SOC parameter: $value"
+                exit 1
+            fi
+            echo "Selected SOC: $value"
+            ENV_SOC=$value
+            ;;
+        "DTS")
+            echo "Selected DTS: $value"
+            ENV_DTB=$value
+            ;;
+        "DEBUG")
+            echo "DEBUG: $value"
+            DEBUG=$value
+            ;;
+        *)
+            fail "Unsupported parameter: $name"
+            exit 1
+            ;;
+    esac
+}
+
+# Setup PATH
+setup_path() {
+if [ -z $ANDROID_BUILD_TOP ]; then
+    export PATH=$PATH:./bin
+else
+    echo -e "\033[33mDetect ANDROID_BUILD_TOP\033[0m"
+    export PATH=$(echo $PATH | sed -e "s@:$ANDROID_BUILD_TOP[^:]*@@g" -e 's/^://' -e 's/:$//'):./bin
+fi
+}
+
+main() {
+    for param in "$@"; do
+        process_param "$param"
+    done
+}
+
+###########################################################################################
+# Start
+###########################################################################################
+if [ "$#" -eq 0 ]; then
+    fail "Usage: $0 [SOC=rk356x,rk3326,rk3562,rk3399,rk3588] [DTS=rk3588-evb1-lp4-v10]"
+    echo "Use export COPY_ALL_KO=1 to copy ko from kernel-$CURRENT_KERNEL_VERSION"
+    exit 1
+fi
+
+main "$@"
+
+# Setup SOC/DTS
+CFG_VENDOR_RAMDISK_LOAD_FILE=$CFG_PATH_DEFAULT/soc/$ENV_SOC/vendor_ramdisk_modules.load
+CFG_BOARD_VRAMDISK_LOAD_FILE=$CFG_PATH_DEFAULT/board/$ENV_DTB.load
+
+# Check file exist or not.
+if [ -f $CFG_VENDOR_RAMDISK_LOAD_FILE ]; then
+  success "Using $CFG_VENDOR_RAMDISK_LOAD_FILE"
+else
+  fail "Current SoC: $ENV_SOC is not support."
+  exit 0
+fi
+
+if [ -f $CFG_BOARD_VRAMDISK_LOAD_FILE ]; then
+  success "Using $CFG_BOARD_VRAMDISK_LOAD_FILE"
+else
+  fail "Current Board: $ENV_DTB is not support."
+  exit 0
+fi
+
+# Set DTS
+DTB_PATH=$CFG_KERNEL_DRIVERS_PATH/arch/arm64/boot/dts/rockchip/$ENV_DTB.dtb
+
+# Copy ko or not
+if [ -z $COPY_ALL_KO ]; then
+    echo "Skip coping ko from kernel-$CURRENT_KERNEL_VERSION"
+    USE_STRIP=0
+else
+    USE_STRIP=1
+fi
+
+setup_path
+
+# Build repack command
+if [ -f vendor_boot.img ]; then
+GLOBAL_UPDATE_LIST="repack_bootimg --local --dst_bootimg new_vendor_boot.img \
+--ramdisk_add $TMP_MODULES_PATH/modules.load:lib/modules/modules.load \
+--ramdisk_add $TMP_MODULES_PATH/modules.load:lib/modules/modules.load.recovery"
+fi
+
+# Prepare dirs
 echo "Preparing $CFG_TMP_DIR dirs and use placeholder 0.0..."
 clean_file system
 clean_file $CFG_TMP_DIR
@@ -126,6 +211,7 @@ echo "Prepare $CFG_TMP_DIR dirs done."
 echo "==========================================="
 echo -e "\033[33mUse DTS as $DTB_PATH\033[0m"
 
+# Copy ko
 if [ -z $COPY_ALL_KO ]; then
 copy_from_load_file $CFG_VENDOR_RAMDISK_LOAD_FILE $OUT_MODULE_DIR
 copy_from_load_file $CFG_BOARD_VRAMDISK_LOAD_FILE $OUT_MODULE_DIR
@@ -135,25 +221,38 @@ copy_from_load_file $CFG_VENDOR_RAMDISK_LOAD_FILE $CFG_KERNEL_DRIVERS_PATH
 copy_from_load_file $CFG_BOARD_VRAMDISK_LOAD_FILE $CFG_KERNEL_DRIVERS_PATH
 fi
 
+# Depmod
 echo "Generating depmod..."
 depmod -b $CFG_TMP_DIR 0.0
 echo "Generate depmod done."
 
-clean_file $OUT_MODULE_DIR
-create_dir $OUT_MODULE_DIR
-mv $TMP_MODULES_PATH/* $OUT_MODULE_DIR/
-cp $CFG_VENDOR_RAMDISK_LOAD_FILE $OUT_MODULE_DIR/modules.load -f
-cat $CFG_BOARD_VRAMDISK_LOAD_FILE >> $OUT_MODULE_DIR/modules.load
+#clean_file $OUT_MODULE_DIR
+#create_dir $OUT_MODULE_DIR
+#mv $TMP_MODULES_PATH/* $OUT_MODULE_DIR/
+# Generate load files
+cp $CFG_VENDOR_RAMDISK_LOAD_FILE $TMP_MODULES_PATH/modules.load -f
+cat $CFG_BOARD_VRAMDISK_LOAD_FILE >> $TMP_MODULES_PATH/modules.load
 rm -rf $OUT_MODULE_DIR/modules.*.bin
 clean_file $OUT_MODULE_DIR/modules.symbols
 clean_file $OUT_MODULE_DIR/modules.devname
 
 echo "==========================================="
+# Repack
 if [ -f vendor_boot.img ]; then
-    echo "Using repack_bootimg: $GLOBAL_UPDATE_LIST"
+    clean_file new_vendor_boot.img
+    cp vendor_boot.img new_vendor_boot.img
+    log "Using repack_bootimg: $GLOBAL_UPDATE_LIST"
     RET=`$GLOBAL_UPDATE_LIST`
-    echo "$RET"
-else
+    log "$RET"
+    # check result file
+    file_size=`du -sh new_vendor_boot.img`
+    if [[ $file_size = "0" ]]; then
+        fail "Failed to repack vendor boot image"
+    else
+        success "Successfully repack vendor boot image: new_vendor_boot.img"
+    fi
+    exit 0
+else # Unused now
 echo "unpacking $CFG_SAMPLE_BOOTIMG..."
 unpack_bootimg --boot_img $CFG_SAMPLE_BOOTIMG --out $TMP_BOOT_DIR
 echo "unpack $CFG_SAMPLE_BOOTIMG done."

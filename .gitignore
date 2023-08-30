@@ -12,6 +12,7 @@
 # Rockchip directory (for rockchip modules)
 #
 
+new_vendor_boot.img
 modules_scan_result.load
 /ramdisk/lib/modules/
 /out/
